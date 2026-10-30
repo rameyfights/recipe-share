@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   lint-and-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     env:
       # package.json has "prepare": "husky install". Husky isn't useful in CI
