@@ -1,30 +1,48 @@
-name: Blog Backend CI
+name: Backend CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+# Least privilege: this workflow only reads the repo.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the old run instead of queueing.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x, 18.x, 20.x]
     defaults:
       run:
         working-directory: ./backend
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20'
           cache: 'npm'
+          # The backend has its own lockfile; without this, setup-node looks
+          # for package-lock.json at the repo root and the cache silently
+          # does nothing.
+          cache-dependency-path: backend/package-lock.json
+
       - name: Install dependencies
-        run: npm install
-      - name: Run linter on backend
+        # npm ci installs exactly what the lockfile says and fails if
+        # package.json and package-lock.json disagree. npm install can drift.
+        run: npm ci
+
+      - name: Lint
         run: npm run lint
-      - name: Run backend tests
+
+      - name: Test
         run: npm test

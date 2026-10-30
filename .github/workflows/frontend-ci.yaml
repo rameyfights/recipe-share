@@ -1,27 +1,44 @@
-name: Blog Frontend CI
+name: Frontend CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
+
+    env:
+      # package.json has "prepare": "husky install". Husky isn't useful in CI
+      # and HUSKY=0 keeps it from writing hooks into the checkout.
+      HUSKY: '0'
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20'
           cache: 'npm'
+          # Frontend lockfile lives at the repo root.
+          cache-dependency-path: package-lock.json
+
       - name: Install dependencies
-        run: npm install
-      - name: Run linter on frontend
+        run: npm ci
+
+      - name: Lint
         run: npm run lint
-      - name: Build frontend
+
+      - name: Build
         run: npm run build
